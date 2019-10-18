@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include "queue.h"
 
+
 /* Music structure */
 typedef struct {    
   char* name;            /* Music name */
@@ -52,36 +53,6 @@ music_t musics[] = {
   {"Don't Go Away","Oasis","British Rock",4.48}
 };
 
-int main(int argc, char* argv[]) {  
-  
-  Initialize();
-  queueInit(&queue, sizeof(music_t));
-
-  pthread_t consumer;
-  pthread_create(&consumer, NULL, Consumer, NULL);
-
-  pthread_t providers[3];
-
-  for (int i = 0; i < 3; ++i) {
-    pthread_create(&providers[i], NULL, Provider, &musics[rand() % 20]);    
-  }
-
-  // Wait all provider threads by joining them
-  for (int i = 0; i < 3; i++) {
-    pthread_join(providers[i], NULL);  
-  }  
-
-  pthread_join(consumer, NULL);  
-
-  return EXIT_SUCCESS;
-}
-
-void Initialize() {
-  //Initialize the mutex and the condition variable
-  pthread_mutex_init(&queueMutex, NULL);
-  pthread_cond_init(&queueCond, NULL);
-}
-
 void printMusic(music_t* music) {
   printf("Music: %s\n"
     "Author: %s\n"
@@ -93,6 +64,37 @@ void printMusic(music_t* music) {
     music->duration
   );
 }
+
+void Initialize() {
+  //Initialize the mutex and the condition variable
+  pthread_mutex_init(&queueMutex, NULL);
+  pthread_cond_init(&queueCond, NULL);
+}
+
+void* Provider(void* data) {
+
+  // while (1) {
+    music_t* music = (music_t*)data;  
+
+    //Lock the queue mutex to make sure that adding data to the queue happens correctly
+    pthread_mutex_lock(&queueMutex);
+
+    //Push new data to the queue
+    enqueue(&queue, &music);
+    
+    //Signal the condition variable that new data is available in the queue
+    pthread_cond_signal(&queueCond);
+
+    //Done, unlock the mutex
+    pthread_mutex_unlock(&queueMutex); 
+
+    // printMusic(&music);
+    // sleep(2);
+  // }  
+
+  return NULL;
+}
+
 
 void* Consumer() {
   
@@ -121,26 +123,27 @@ void* Consumer() {
   return NULL;
 }
 
-void* Provider(void* data) {
 
-  // while (1) {
-    music_t* music = (music_t*)data;  
+int main(int argc, char* argv[]) {  
+  
+  Initialize();
+  queueInit(&queue, sizeof(music_t));
 
-    //Lock the queue mutex to make sure that adding data to the queue happens correctly
-    pthread_mutex_lock(&queueMutex);
+  pthread_t consumer;
+  pthread_create(&consumer, NULL, Consumer, NULL);
 
-    //Push new data to the queue
-    enqueue(&queue, &music);
-    
-    //Signal the condition variable that new data is available in the queue
-    pthread_cond_signal(&queueCond);
+  pthread_t providers[10];
 
-    //Done, unlock the mutex
-    pthread_mutex_unlock(&queueMutex); 
+  for (int i = 0; i < 10; ++i) {
+    pthread_create(&providers[i], NULL, Provider, &musics[rand() % 32]);    
+  }
 
-    // printMusic(&music);
-    // sleep(2);
-  // }  
+  // Wait all provider threads by joining them
+  for (int i = 0; i < 3; i++) {
+    pthread_join(providers[i], NULL);  
+  }  
 
-  return NULL;
+  pthread_join(consumer, NULL);  
+
+  return EXIT_SUCCESS;
 }
