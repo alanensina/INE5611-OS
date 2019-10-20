@@ -1,3 +1,11 @@
+/*
+Sistemas de Informação - UFSC
+INE5611 - Sistemas Operacionais
+Trabalho 01 - IPC
+Alan Vinicius Cezar Ensina - 16206354
+Thiago Machado Raskopf - 16200921
+*/
+
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
