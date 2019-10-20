@@ -71,10 +71,10 @@ void Initialize() {
   pthread_cond_init(&queueCond, NULL);
 }
 
-void* Provider(void* data) {
+void* Provider() {
 
-  // while (1) {
-    music_t* music = (music_t*)data;  
+  while (1) {
+    music_t* music = &musics[rand() % 32];  
 
     //Lock the queue mutex to make sure that adding data to the queue happens correctly
     pthread_mutex_lock(&queueMutex);
@@ -87,10 +87,9 @@ void* Provider(void* data) {
 
     //Done, unlock the mutex
     pthread_mutex_unlock(&queueMutex); 
-
-    // printMusic(&music);
-    // sleep(2);
-  // }  
+    
+    sleep(2);
+  }  
 
   return NULL;
 }
@@ -105,10 +104,10 @@ void* Consumer() {
 
     //As long as the queue is empty,
     while(!queueSize(&queue)) {
-        // - wait for the condition variable to be signalled
-        //Note: This call unlocks the mutex when called and
-        //relocks it before returning!
-        pthread_cond_wait(&queueCond, &queueMutex);
+      // - wait for the condition variable to be signalled
+      //Note: This call unlocks the mutex when called and
+      //relocks it before returning!
+      pthread_cond_wait(&queueCond, &queueMutex);
     }
 
     music_t* music;
@@ -129,21 +128,25 @@ int main(int argc, char* argv[]) {
   Initialize();
   queueInit(&queue, sizeof(music_t));
 
-  pthread_t consumer;
-  pthread_create(&consumer, NULL, Consumer, NULL);
+  // pthread_t consumer;
+  // pthread_create(&consumer, NULL, Consumer, NULL);
 
-  pthread_t providers[10];
+  pthread_t provider;
+  pthread_create(&provider, NULL, Provider, NULL);
 
-  for (int i = 0; i < 10; ++i) {
-    pthread_create(&providers[i], NULL, Provider, &musics[rand() % 32]);    
+  pthread_t consumers[3];
+
+  for (int i = 0; i < 3; ++i) {    
+    // Creating a thread in detached mode passing the song list lenght as argument
+    pthread_create(&consumers[i], NULL, Consumer, NULL);   
   }
 
-  // Wait all provider threads by joining them
+  // Wait all consumer threads by joining them
   for (int i = 0; i < 3; i++) {
-    pthread_join(providers[i], NULL);  
+    pthread_join(consumers[i], NULL);  
   }  
 
-  pthread_join(consumer, NULL);  
+  pthread_join(provider, NULL);  
 
   return EXIT_SUCCESS;
 }
